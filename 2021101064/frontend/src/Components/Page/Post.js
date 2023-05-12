@@ -1,0 +1,352 @@
+import axios from "axios";
+import React, { useState } from "react"
+import upvote from '../Images/upvote.png'
+import downvote from '../Images/downvote.png'
+import comment from '../Images/comment.png'
+import bookmarkicon from '../Images/bookmark.png'
+import report from '../Images/report.png'
+import InsertCommentIcon from '@mui/icons-material/InsertComment';
+
+
+const getDate = (date) => {
+
+  var months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+
+  var now = new Date(date);
+  return months[now.getMonth()] + ' ' + now.getDate() + ',' + now.getFullYear()
+}
+
+
+
+
+const Post = (props) => {
+
+  const data = props.data
+ 
+
+  let sub = null
+  if (props.sub != undefined) {
+    sub = props.sub
+  }
+
+
+  const email = props.current
+
+  const bookmark = props.arr
+
+  const mods = props.mod
+
+
+  const [arr, setArr] = useState([])
+
+
+  // Update the array
+
+  const Update = async (e) => {
+    if (arr.length > 0 || e.length === 0) {
+      return
+    }
+    setArr(e)
+
+  }
+
+
+
+  axios.post('http://localhost:4000/api/post/getcomment', {
+    list: data.comments,
+  }).then((res) => {
+    Update(res.data.output).then(() => {
+      console.log("SUCCESSS")
+
+    }).catch((ERR) => {
+      console.log("Error: ", ERR)
+    })
+
+  })
+
+  let dink = data.id
+
+  if (props.tim === false) {
+    console.log("here")
+    dink = data._id
+  }
+  // Creates a modal component to display the comments
+  const ModalOfComments = () => {
+
+    const [bodyofcomment, setBody] = useState('')
+
+
+    const HandleComment = () => {
+      axios.post('http://localhost:4000/api/post/comment', {
+        email: email,
+        body: bodyofcomment,
+        id: data.id,
+
+      }).then(() => {
+        console.log("DONE")
+
+      }).catch((err) => {
+        console.log("Error: AXIOS")
+      })
+    }
+
+
+
+
+    return (
+      <div style={{
+        display: 'inline-block'
+      }}>
+
+        <button type="button" className="btn btn-outline-info" data-bs-toggle="modal" data-bs-target={"#exampleModalinside" + data.id}>
+          {/* <img src={comment} width='20' height='20' alt='op' />
+           */}
+           <InsertCommentIcon />
+           &nbsp;
+          {data.comments.length}
+        </button>
+
+
+        <div className="modal fade" id={"exampleModalinside" + data.id} tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true">
+          <div className="modal-dialog modal-dialog-centered">
+            <div className="modal-content">
+              <div className="modal-header">
+                <h1 className="modal-title fs-5" id="exampleModalLabel">Comments</h1>
+                <button type="button" className="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+              </div>
+              <div className="modal-body">
+                {
+                  data.comments.length === 0 ?
+                    <p>NO comments yet!</p>
+                    :
+                    data.comments.map((val, index) => {
+                      if (arr.length === 0) {
+                        return (
+                          <></>
+                        )
+
+                      }
+                      return (
+                        <div className="container my-3">
+                          <img src={arr[index].profile} height='30' width='30' className="rounded-circle" alt='profile' />
+                          <a href={'/profile/' + arr[index].username} style={{
+                            textDecoration: 'none',
+                            color: 'black',
+                            fontWeight: 'bold'
+                          }}>{arr[index].username} &nbsp;</a>
+                          <p>{val.body}</p>
+
+                        </div>
+                      )
+                    })
+                }
+                { 
+                props.follower === true ?
+                <form onSubmit={HandleComment}>
+                  <div className="input-group mb-3">
+                    <input type="text" className="form-control" placeholder="Add comment here" aria-label="Username" aria-describedby="basic-addon1" value={bodyofcomment} onChange={(e) => { setBody(e.target.value) }} />
+                  </div>
+                  
+                  <button className="btn btn-outline-warning" type="submit" data-bs-dismiss="modal">
+                    Add Comment
+                  </button>
+
+                </form>
+                :
+
+                <p style={{
+                  fontWeight:'bold'
+                }}>SORRY, BUT YOU ARE NOT ALLOWED TO COMMENT HERE.</p>
+  }
+              </div>
+    
+
+
+            </div>
+
+          </div>
+
+        </div>
+      </div>
+    )
+  }
+
+  const [upvotes,setUp] = useState(data.upvotes) 
+  const [downvotes,setDown] = useState(data.downvotes) 
+
+  const HandleUpvote = () => {
+    axios.post('http://localhost:4000/api/post/upvote', {
+      id: data.id,
+      email: email,
+    }).then(() => {
+      setUp([...upvotes,email]) 
+      setDown(downvotes.filter((e)=>{
+        return e !== email 
+      }))
+    }).catch((Err) => {
+      console.log("Axios error")
+    })
+  }
+
+  const HandleDownvote = () => {
+    axios.post('http://localhost:4000/api/post/downvote', {
+
+      id: data.id,
+      email: email,
+    }).then(() => {
+      setDown([...downvotes,email]) 
+      setUp(upvotes.filter((e)=>{
+        return e !== email 
+      }))
+    }).catch((Err) => {
+      console.log("Axios error")
+    })
+  }
+
+  const HandleBookmark = () => {
+    axios.post('http://localhost:4000/api/post/bookmark', {
+      token: 'BEARER ' + window.localStorage.getItem('myaccesstoken'),
+      id: data.id,
+    }).then((res) => {
+
+      window.location.reload()
+    }).catch((err) => {
+      console.log("Error: AXIOS MADARCHOD")
+    })
+  }
+
+  const HandleRemoveBookmark = () => {
+    axios.post('http://localhost:4000/api/post/delbookmark', {
+      token: 'BEARER ' + window.localStorage.getItem('myaccesstoken'),
+      id: data.id,
+    }).then((res) => {
+      alert('Done')
+      window.location.reload()
+    }).catch((err) => {
+      console.log("Error: AXIOS MADARCHOD")
+    })
+  }
+
+  const HandleReports = () => {
+    if (data.email === email) {
+      alert('ALERT: You cannot report yourself!')
+      return
+    }
+    if (mods.includes(data.email)) {
+      alert('You cannot report a moderator!')
+      return
+    }
+    axios.post('http://localhost:4000/api/post/report', {
+      reporter: email,
+      reported: data.email,
+      concern: 'porn',
+      postID: data.id,
+      name: sub,
+    }).then((res) => {
+      if (res.data.reported === true) {
+
+      }
+
+      alert('Reported')
+    })
+  }
+
+  return (
+    <div className="card text w-100">
+      <div className="card-header text-center">
+        <h3>
+          {data.title}
+        </h3>
+
+      </div>
+      <div className="card-body w-100">
+        <a href={'/profile/' + data.username} style={{
+          textDecoration: 'none',
+          color: 'black',
+          fontWeight: 'bold'
+        }}>
+          <img src={data.profile} width='40' height='40' className="rounded-circle" alt='profile' /> &nbsp;
+          {data.username} &nbsp;
+        </a>
+        {
+          props.name === undefined ?
+            ""
+            :
+            <a href={'/gr/' + props.name} style={{
+              textDecoration: 'none',
+              color: 'black',
+
+            }}>(from {props.name})</a>
+        }
+
+        <p className="card-text w-100">{data.body}</p>
+        <div className="row">
+
+          <div className="col">
+            {
+              // data.upvotes.includes(email) === false ?
+              upvotes.includes(email) === false ?
+                <button className="btn btn-outline-success" onClick={() => {
+                  HandleUpvote()
+                }}><img src={upvote} width='20' height='20' alt='op' /> {upvotes.length} </button>
+                :
+                <button className="btn btn-outline-success" disabled>
+                  <img src={upvote} width='20' height='20' alt='op' /> {upvotes.length} </button>
+            }
+         
+            {
+              downvotes.includes(email) === false ?
+
+                <button className="btn btn-outline-danger" onClick={() => {
+                  HandleDownvote()
+                }}>
+                  <img src={downvote} width='20' height='20' alt='op' /> {downvotes.length}
+                </button>
+                :
+                <button className="btn btn-outline-danger" disabled>
+                  <img src={downvote} width='20' height='20' alt='op' /> {downvotes.length} </button>
+            }
+
+            {
+              props.discomment === false ?
+                ""
+                :
+                <ModalOfComments />
+            }
+
+          </div>
+
+          <div className="col-5"></div>
+          <div className="col d-flex flex-row-reverse">
+            
+            {
+              bookmark.includes(dink) === true || props.show === true ?
+                <button className="btn btn-outline-danger" onClick={
+                  () => {
+                    HandleRemoveBookmark()
+                  }
+                }
+                  data-toggle="tooltip" data-placement="top" title="Remove from Saved Posts"><img src={bookmarkicon} width='20' height='20' alt='op' /></button>
+                :
+                <button className='btn btn-outline-warning' onClick={() => {
+                  HandleBookmark()
+                }}
+                  data-toggle="tooltip" data-placement="top" title="Add To Saved Posts"><img src={bookmarkicon} width='20' height='20' alt='op' /></button>
+            }
+            <button className='btn btn-outline-danger' onClick={() => {
+              HandleReports()
+            }}>
+              <img src={report} width='20' height='20' alt='op' />
+            </button>
+          </div>
+        </div>
+      </div>
+      <div className="card-footer text-muted">
+        Posted on: {getDate(data.created)}
+
+      </div>
+    </div>
+  )
+}
+
+export default Post 
